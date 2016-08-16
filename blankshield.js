@@ -166,7 +166,10 @@
     openArgs = '"' + url + '"';
     if (strWindowName) {
       openArgs += ', "' + strWindowName + '"';
+    } else {
+      openArgs += ', null';
     }
+
     if (strWindowFeatures) {
       openArgs += ', "' + strWindowFeatures + '"';
     }
