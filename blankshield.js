@@ -1,4 +1,4 @@
-;(function(root) {
+;(function(window) {
   'use strict';
 
   /**
@@ -217,5 +217,5 @@
   }
 
   // export default blankshield function
-  root.blankshield = blankshield;
-}(this));
+  window.blankshield = blankshield;
+})(window);
