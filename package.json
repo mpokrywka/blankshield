@@ -1,5 +1,5 @@
 {
-  "name": "blankshield",
+  "name": "@mpokrywka/blankshield",
   "version": "0.6.1",
   "description": "Prevent reverse tabnabbing phishing attacks caused by _blank",
   "keywords": [
@@ -15,7 +15,7 @@
   "homepage": "https://github.com/danielstjules/blankshield",
   "repository": {
     "type": "git",
-    "url": "https://github.com/danielstjules/blankshield.git"
+    "url": "https://github.com/mpokrywka/blankshield.git"
   },
   "main": "blankshield.js",
   "devDependencies": {
