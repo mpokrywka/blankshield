@@ -1,6 +1,6 @@
 {
   "name": "@mpokrywka/blankshield",
-  "version": "0.6.1",
+  "version": "0.7.0",
   "description": "Prevent reverse tabnabbing phishing attacks caused by _blank",
   "keywords": [
     "prevent",
@@ -12,7 +12,7 @@
   ],
   "author": "Daniel St. Jules <danielst.jules@gmail.com>",
   "license": "MIT",
-  "homepage": "https://github.com/danielstjules/blankshield",
+  "homepage": "https://github.com/mpokrywka/blankshield",
   "repository": {
     "type": "git",
     "url": "https://github.com/mpokrywka/blankshield.git"
