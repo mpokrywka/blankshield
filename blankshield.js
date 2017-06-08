@@ -2,13 +2,6 @@
   'use strict';
 
   /**
-   * Detect IE versions older than 11.
-   *
-   * @var {boolean}
-   */
-  var oldIE = navigator.userAgent.indexOf('MSIE') !== -1;
-
-  /**
    * Cached window.open function.
    *
    * @var {function}
@@ -33,13 +26,96 @@
     }
   }
 
+  var browser = blankshield.browser = {},
+      navigator = window.navigator || {},
+      userAgent = navigator.userAgent || '',
+      document = window.document;
+
+  // browser engine detection by testing features
+  // noopener feature "detection" by detecting other engine features implemented simultaneously
+  if (window.chrome && (chrome.webstore || chrome.csi)) {
+    // Chrome 1+
+    browser.chrome = true;
+
+  } else if (/constructor/i.test(window.HTMLElement) ||
+    Object.prototype.toString.call(window.safari && safari.pushNotification) == '[object SafariRemoteNotification]') {
+    // Safari 3.0-9.1.2 "[object HTMLElementConstructor]"
+    // SafariRemoteNotification added in Safari 7.1
+    browser.safari = true;
+
+  } else if (typeof InstallTrigger !== 'undefined') {
+    // Firefox 1.0+
+    browser.firefox = true;
+    // https://developer.mozilla.org/en-US/Firefox/Releases/52
+    // Event.composed property added and Event.cancelBubble property removed
+    // when noopener was introduced
+    browser.noopener = !!window.Event && 'composed' in Event.prototype &&
+      !!window.UIEvent && !UIEvent.prototype.hasOwnProperty('cancelBubble');
+
+  } else if ('ActiveXObject' in window) {
+    // Internet Explorer 6-11
+    // window.ActiveXObject is false in IE11, but 'ActiveXObject' in window
+    // still returns true
+    browser.msie = {
+      // IEMobile detection by userAgent sniffing
+      // TODO: check windows developer blog if feature detection is possible
+      // https://blogs.windows.com/buildingapps/2012/11/08/internet-explorer-10-brings-html5-to-windows-phone-8-in-a-big-way
+      mobile: /IEMobile/.test(userAgent)
+    };
+
+  } else if (window.StyleMedia) {
+    // MS Edge
+    // StyleMedia is also exposed in MSIE 9-11, but old IE is detected by
+    // previous "if" condition
+    browser.edge = true;
+
+  } else if (window.opr && opr.addons) {
+    // Opera 20+
+    browser.opera = true;
+
+  } else if (/ Chrome\/[1-9]/.test(userAgent)) {
+    // Opera 15-19 && SamsungBrowser will be detected as Chrome-like by userAgent sniffing
+    // Edge which also has "Chrome" string in userAgent was detected earlier
+    browser.like_chrome = true;
+
+  } else if (window.opera) {
+    // Opera until 12.16 (Presto engine)
+    browser.old_opera = true;
+
+  } else if ('WebkitAppearance' in document.documentElement.style) {
+    browser.webkit = true;
+  }
+
+  // Blink & Webkit noopener "detection"
+  // assumption: less popular browsers include same features as primary engine users (Chrome/Safari)
+  if (browser.chrome || browser.opera || browser.like_chrome) {
+    // https://blog.chromium.org/2016/02/chrome-49-beta-css-custom-properties.html
+    // navigator.getStorageUpdates and MouseEvent.webkitMovementX was removed
+    // and OfflineAudioContext.suspend was added
+    // when noopener was implemented
+    browser.noopener = !navigator.getStorageUpdates &&
+      !!window.MouseEvent && !('webkitMovementX' in MouseEvent.prototype) &&
+      !!window.OfflineAudioContext && 'suspend' in OfflineAudioContext.prototype;
+
+  } else if (browser.safari || browser.webkit) {
+    // https://webkit.org/blog/7071/release-notes-for-safari-technology-preview-17/
+    browser.noopener = !!window.InputEvent && 'dataTransfer' in InputEvent.prototype &&
+      !!window.IDBIndex && 'getAll' in IDBIndex.prototype;
+  }
+
   /**
    * Accepts the same arguments as window.open. If the strWindowName is not
-   * equal to one of the safe targets (_top, _self or _parent), then it opens
-   * the destination url using "window.open" from an injected iframe, then
-   * removes the iframe. This behavior applies to all browsers except IE < 11,
-   * which use "window.open" followed by setting the child window's opener to
-   * null. If the strWindowName is set to some other value, the url is simply
+   * equal to one of the safe targets (_top, _self or _parent), then:
+   * - for Safari it opens the destination url using "window.open" from
+   *   an injected iframe, then removes the iframe. This method cannot be used
+   *   in other browsers because it also clears referrer,
+   * - for old MSIE - it opens blank window, sets child window's opener to null
+   *   and then sets requested location, in IEMobile "window.open" replaces
+   *   current window and doesn't return valid window object, so this method
+   *   cannot be used,
+   * - for other browsers - it uses "window.open" followed by setting the child
+   *   window's opener to null.
+   * If the strWindowName is set to some other value, the url is simply
    * opened with window.open().
    *
    * @param   {string} strUrl
@@ -48,17 +124,26 @@
    * @returns {Window}
    */
   blankshield.open = function(strUrl, strWindowName, strWindowFeatures) {
-    var child;
+    var child, args;
 
     if (safeTarget(strWindowName)) {
       return open.apply(window, arguments);
-    } else if (!oldIE) {
+    } else if (browser.safari) {
       return iframeOpen(strUrl, strWindowName, strWindowFeatures);
+    } else if (browser.msie && !browser.msie.mobile) {
+      args = Array.prototype.slice.call(arguments);
+      args[0] = '';
+      child = open.apply(window, args);
+      if (child) {
+        child.opener = null;
+        child.location = strUrl;
+      }
+      return child;
     } else {
-      // Replace child.opener for old IE to avoid appendChild errors
-      // We do it for all to avoid having to sniff for specific versions
       child = open.apply(window, arguments);
-      child.opener = null;
+      if (child) {
+        child.opener = null;
+      }
       return child;
     }
   };
